@@ -1,0 +1,30 @@
+{
+  "name": "@clark/ipe",
+  "version": "0.1.0",
+  "private": true,
+  "theia": {
+    "frontend": {
+      "config": {
+        "applicationName": "Clark IPE",
+        "reloadOnReconnect": true
+      }
+    }
+  },
+  "scripts": {
+    "build": "theia build",
+    "start": "theia start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@theia/core": "^1.50.0",
+    "@theia/messages": "^1.50.0",
+    "@theia/navigator": "^1.50.0",
+    "@theia/filesystem": "^1.50.0",
+    "clark-core-extension": "workspace:src/extensions/clark-core-extension",
+    "clark-messaging-extension": "workspace:src/extensions/clark-messaging-extension"
+  },
+  "devDependencies": {
+    "@theia/cli": "^1.50.0",
+    "typescript": "~5.4.5"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/db" },
+    { "path": "./packages/events" },
+    { "path": "./packages/identity" },
+    { "path": "./packages/messaging" },
+    { "path": "./packages/storage" },
+    { "path": "./packages/reporting" },
+    { "path": "./apps/api" }
+  ]
+}
