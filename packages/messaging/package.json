@@ -1,0 +1,27 @@
+{
+  "name": "@clark/messaging",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --build --watch"
+  },
+  "dependencies": {
+    "@clark/core": "workspace:*",
+    "@xmpp/client": "^0.13.0",
+    "@xmpp/debug": "^0.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

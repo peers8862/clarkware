@@ -1,0 +1,22 @@
+{
+  "name": "clark",
+  "private": true,
+  "packageManager": "pnpm@9.x",
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "docker:up": "docker compose -f docker/compose.yml up -d",
+    "docker:down": "docker compose -f docker/compose.yml down"
+  },
+  "devDependencies": {
+    "turbo": "^2",
+    "typescript": "~5.4.5",
+    "@typescript-eslint/eslint-plugin": "^7",
+    "@typescript-eslint/parser": "^7",
+    "eslint": "^9",
+    "prettier": "^3"
+  }
+}

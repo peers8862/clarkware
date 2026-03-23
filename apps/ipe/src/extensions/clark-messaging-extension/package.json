@@ -1,0 +1,24 @@
+{
+  "name": "clark-messaging-extension",
+  "version": "0.1.0",
+  "private": true,
+  "theiaExtensions": [
+    {
+      "frontend": "lib/frontend-module"
+    }
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@theia/core": "^1.50.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "typescript": "~5.4.5"
+  }
+}
