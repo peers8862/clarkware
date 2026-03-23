@@ -3,18 +3,10 @@ import type { WorkstationId, PersonId } from '../common/branded.js';
 
 export type WorkstationSessionStartedEvent = EventEnvelope<
   'workstation.session.started',
-  {
-    readonly workstationId: WorkstationId;
-    readonly personId: PersonId;
-    readonly sessionToken: string;
-  }
+  { readonly workstationId: WorkstationId; readonly personId: PersonId; readonly activeJobId: string | null }
 >;
 
 export type WorkstationSessionEndedEvent = EventEnvelope<
   'workstation.session.ended',
-  {
-    readonly workstationId: WorkstationId;
-    readonly personId: PersonId;
-    readonly durationSeconds: number;
-  }
+  { readonly workstationId: WorkstationId; readonly personId: PersonId; readonly durationSeconds: number }
 >;
