@@ -39,15 +39,37 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
     async (protected_) => {
       await protected_.register(authPlugin.default);
 
-      const facilitiesRoutes = await import('./routes/v1/facilities.js');
-      const jobsRoutes       = await import('./routes/v1/jobs.js');
-      const notesRoutes      = await import('./routes/v1/notes.js');
-      const eventsRoutes     = await import('./routes/v1/events.js');
+      const [
+        facilitiesRoutes,
+        jobsRoutes,
+        notesRoutes,
+        eventsRoutes,
+        issuesRoutes,
+        conversationsRoutes,
+        presenceRoutes,
+        shiftsRoutes,
+        permissionsRoutes,
+      ] = await Promise.all([
+        import('./routes/v1/facilities.js'),
+        import('./routes/v1/jobs.js'),
+        import('./routes/v1/notes.js'),
+        import('./routes/v1/events.js'),
+        import('./routes/v1/issues.js'),
+        import('./routes/v1/conversations.js'),
+        import('./routes/v1/presence.js'),
+        import('./routes/v1/shifts.js'),
+        import('./routes/v1/permissions.js'),
+      ]);
 
       await protected_.register(facilitiesRoutes.default);
       await protected_.register(jobsRoutes.default);
       await protected_.register(notesRoutes.default);
       await protected_.register(eventsRoutes.default);
+      await protected_.register(issuesRoutes.default);
+      await protected_.register(conversationsRoutes.default);
+      await protected_.register(presenceRoutes.default);
+      await protected_.register(shiftsRoutes.default);
+      await protected_.register(permissionsRoutes.default);
     },
     { prefix: '/v1' },
   );

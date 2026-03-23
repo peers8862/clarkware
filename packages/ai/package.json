@@ -1,0 +1,15 @@
+{
+  "name": "@clark/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" } },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": { "build": "tsc --build", "typecheck": "tsc --noEmit", "dev": "tsc --build --watch" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.40.0",
+    "@clark/core": "workspace:*",
+    "@clark/db": "workspace:*"
+  }
+}

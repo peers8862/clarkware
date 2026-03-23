@@ -7,4 +7,4 @@ export {
   revokeRefreshToken,
 } from './session.js';
 export type { RefreshTokenRecord } from './session.js';
-export { can } from './rbac.js';
+export { can, personJid, agentJid, serviceJid, actorTypeFromJid } from './rbac.js';

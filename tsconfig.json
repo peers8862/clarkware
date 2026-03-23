@@ -8,6 +8,8 @@
     { "path": "./packages/messaging" },
     { "path": "./packages/storage" },
     { "path": "./packages/reporting" },
+    { "path": "./packages/ai" },
+    { "path": "./packages/sync" },
     { "path": "./apps/api" }
   ]
 }
