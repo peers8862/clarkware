@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
+import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '@clark/db';
 import { can } from '@clark/identity';
-import { PermissionCategory, PresenceStateValue } from '@clark/core';
+import { PermissionCategory, PresenceStateValue, SourceType, asId } from '@clark/core';
+import type { EventId, ActorId, WorkstationId, ArtifactId } from '@clark/core';
 import { forbidden, notFound } from '../../errors.js';
 import { broadcastEvent } from '../ws/realtime.js';
 
@@ -84,11 +86,10 @@ export default async function presenceRoutes(fastify: FastifyInstance): Promise<
         [actorId, workstationId, state, statusMessage ?? null],
       );
 
-      // Broadcast presence change for real-time subscriptions
       broadcastEvent({
-        id: `presence-${actorId}-${workstationId}-${Date.now()}`,
+        id: asId<EventId>(uuidv4()),
         type: 'presence.changed',
-        workstationId,
+        workstationId: asId<WorkstationId>(workstationId),
         facilityId: null,
         jobId: null,
         issueId: null,
@@ -98,14 +99,19 @@ export default async function presenceRoutes(fastify: FastifyInstance): Promise<
         actor: { actorId, type: request.actor.type },
         occurredAt: new Date(),
         recordedAt: new Date(),
-        sourceType: 'human_ui',
+        sourceType: SourceType.HumanUI,
         correlationId: null,
         causationId: null,
-        artifactRefs: [],
+        artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
         retentionClass: 'transient',
         metadata: {},
-        payload: { actorId, workstationId, newState: state, statusMessage: statusMessage ?? null },
-      } as never);
+        payload: {
+          actorId: asId<ActorId>(actorId),
+          workstationId: asId<WorkstationId>(workstationId),
+          fromState: null,
+          toState: state as PresenceStateValue,
+        },
+      });
 
       return { ok: true };
     },

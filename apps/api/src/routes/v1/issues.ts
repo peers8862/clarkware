@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '@clark/db';
 import { EventStore } from '@clark/events';
 import { can } from '@clark/identity';
-import { PermissionCategory, asId } from '@clark/core';
-import type { IssueId, FacilityId } from '@clark/core';
+import { PermissionCategory, SourceType, asId } from '@clark/core';
+import type { IssueId, FacilityId, EventId, ArtifactId, JobId } from '@clark/core';
+import type { IssueSeverity, IssueType } from '@clark/core';
 import { forbidden, notFound, badRequest } from '../../errors.js';
 import { broadcastEvent } from '../ws/realtime.js';
 
@@ -88,7 +89,7 @@ export default async function issuesRoutes(fastify: FastifyInstance): Promise<vo
         throw forbidden();
       }
 
-      const id = uuidv7();
+      const id = uuidv4();
       const actorId = request.actor.actorId;
 
       await query(
@@ -101,7 +102,7 @@ export default async function issuesRoutes(fastify: FastifyInstance): Promise<vo
 
       const issueId = asId<IssueId>(id);
       const event = {
-        id: uuidv7(),
+        id: asId<EventId>(uuidv4()),
         type: 'issue.opened' as const,
         facilityId: asId<FacilityId>(facilityId),
         workstationId: null,
@@ -111,13 +112,15 @@ export default async function issuesRoutes(fastify: FastifyInstance): Promise<vo
         actor: { actorId, type: request.actor.type },
         occurredAt: new Date(),
         recordedAt: new Date(),
-        sourceType: 'human_ui' as const,
+        streamId: `issue:${id}`,
+        sequenceNumber: 0,
+        sourceType: SourceType.HumanUI,
         correlationId: null,
         causationId: null,
-        artifactRefs: [],
+        artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
         retentionClass: 'operational' as const,
-        metadata: {},
-        payload: { issueId, title, issueType, severity, openedByActorId: actorId },
+        metadata: {} as Record<string, unknown>,
+        payload: { issueId, jobId: jobId ? asId<JobId>(jobId) : null, issueType: issueType as IssueType, description, severity: severity as IssueSeverity },
       };
 
       await eventStore.append(`issue:${id}`, -1, [event]);

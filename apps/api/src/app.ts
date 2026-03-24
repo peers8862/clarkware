@@ -49,6 +49,8 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
         presenceRoutes,
         shiftsRoutes,
         permissionsRoutes,
+        aiRoutes,
+        artifactsRoutes,
       ] = await Promise.all([
         import('./routes/v1/facilities.js'),
         import('./routes/v1/jobs.js'),
@@ -59,6 +61,8 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
         import('./routes/v1/presence.js'),
         import('./routes/v1/shifts.js'),
         import('./routes/v1/permissions.js'),
+        import('./routes/v1/ai.js'),
+        import('./routes/v1/artifacts.js'),
       ]);
 
       await protected_.register(facilitiesRoutes.default);
@@ -70,6 +74,8 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
       await protected_.register(presenceRoutes.default);
       await protected_.register(shiftsRoutes.default);
       await protected_.register(permissionsRoutes.default);
+      await protected_.register(aiRoutes.default);
+      await protected_.register(artifactsRoutes.default);
     },
     { prefix: '/v1' },
   );

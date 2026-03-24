@@ -10,6 +10,7 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@clark/ai": "workspace:*",
     "@clark/core": "workspace:*",
     "@clark/db": "workspace:*",
     "@clark/events": "workspace:*",
@@ -17,16 +18,16 @@
     "@clark/storage": "workspace:*",
     "@clark/messaging": "workspace:*",
     "fastify": "^5.0.0",
-    "@fastify/cors": "^9.0.0",
-    "@fastify/helmet": "^11.0.0",
-    "@fastify/jwt": "^8.0.0",
-    "@fastify/websocket": "^10.0.0",
-    "@fastify/env": "^4.3.0",
-    "uuid": "^9.0.0",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/websocket": "^11.2.0",
+    "@fastify/env": "^5.0.3",
+    "uuid": "^10.0.0",
     "fastify-plugin": "^4.5.0"
   },
   "devDependencies": {
-    "@types/uuid": "^9.0.0",
+    "@types/pg": "^8.11.0",
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0"
   }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '@clark/db';
 import { can } from '@clark/identity';
 import { PermissionCategory, ConversationType } from '@clark/core';
@@ -113,7 +113,7 @@ export default async function conversationsRoutes(fastify: FastifyInstance): Pro
         throw forbidden();
       }
 
-      const id = uuidv7();
+      const id = uuidv4();
 
       await query(
         `INSERT INTO conversations (id, conversation_type, facility_id, zone_id, workstation_id, job_id, issue_id, title, status)
@@ -207,7 +207,7 @@ export default async function conversationsRoutes(fastify: FastifyInstance): Pro
         throw forbidden();
       }
 
-      const msgId = uuidv7();
+      const msgId = uuidv4();
       const actorId = request.actor.actorId;
 
       await query(

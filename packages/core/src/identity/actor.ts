@@ -1,5 +1,6 @@
 import type { ActorId, PersonId, AgentId, AutomationServiceId } from '../common/branded.js';
-import type { Role, ActorType } from './roles.js';
+import type { Role } from './roles.js';
+import { ActorType } from './roles.js';
 import type { PermissionCategory, PermissionScope } from './permissions.js';
 import type { AgentActionClass } from '../common/enums.js';
 

@@ -17,14 +17,15 @@ export default async function eventsRoutes(fastify: FastifyInstance): Promise<vo
       }
 
       const { stream, since, limit } = request.query;
-      const sinceDate = since ? new Date(since) : undefined;
       const limitNum = limit ? Math.min(parseInt(limit, 10), 1000) : 100;
 
       if (stream) {
         return eventStore.readStream(stream);
       }
 
-      return eventStore.readAll(sinceDate, limitNum);
+      // since param treated as global_seq watermark if numeric, else ignored
+      const fromSeq = since ? parseInt(since, 10) : 0;
+      return eventStore.readAll(isNaN(fromSeq) ? 0 : fromSeq, limitNum);
     },
   );
 }

@@ -13,7 +13,9 @@ declare module 'fastify' {
 }
 
 export default fp(async function authPlugin(fastify: FastifyInstance) {
-  fastify.decorateRequest('actor', null);
+  fastify.decorateRequest('actor', {
+    getter() { return undefined as unknown as Actor; },
+  });
 
   fastify.addHook('preHandler', async (request: FastifyRequest) => {
     const authHeader = request.headers['authorization'];

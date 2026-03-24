@@ -75,7 +75,7 @@ export class NotesWidget extends ReactWidget {
               }}
               placeholder="Add a note…"
               value={this.inputValue}
-              onChange={(e) => { this.inputValue = e.target.value; }}
+              onChange={(e) => { this.inputValue = (e.target as HTMLInputElement).value; }}
             />
             <button
               style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }}

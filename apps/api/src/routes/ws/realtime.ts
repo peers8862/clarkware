@@ -9,8 +9,8 @@ const subscribers = new Map<string, Set<WebSocket>>();
  * Subscribe a WebSocket connection to events from a stream.
  * Called from route handlers that need to fan out events.
  */
-export function broadcastEvent(streamId: string, event: DomainEvent): void {
-  const clients = subscribers.get(streamId);
+export function broadcastEvent(event: DomainEvent): void {
+  const clients = subscribers.get(event.streamId);
   if (!clients) return;
   const payload = JSON.stringify(event);
   for (const ws of clients) {

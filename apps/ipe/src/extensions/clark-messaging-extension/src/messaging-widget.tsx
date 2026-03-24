@@ -133,7 +133,7 @@ export class MessagingWidget extends ReactWidget {
               }}
               placeholder="Message…"
               value={this.inputValue}
-              onChange={(e) => { this.inputValue = e.target.value; }}
+              onChange={(e) => { this.inputValue = (e.target as HTMLInputElement).value; }}
               onKeyDown={(e) => { if (e.key === 'Enter') this.send(); }}
               disabled={!this.connected}
             />

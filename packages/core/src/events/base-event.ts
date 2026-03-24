@@ -1,5 +1,6 @@
 import type { EventId, FacilityId, WorkstationId, JobId, IssueId, ConversationId, ArtifactId } from '../common/branded.js';
-import type { ActorType, SourceType } from '../common/enums.js';
+import type { SourceType } from '../common/enums.js';
+import type { ActorType } from '../identity/roles.js';
 
 export interface EventEnvelope<TType extends string, TPayload> {
   readonly id: EventId;

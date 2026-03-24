@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '@clark/db';
 import { EventStore } from '@clark/events';
 import { can } from '@clark/identity';
-import { PermissionCategory } from '@clark/core';
+import { PermissionCategory, SourceType, asId } from '@clark/core';
+import type { FacilityId, WorkstationId, EventId, ArtifactId, ShiftId, ActorId, NoteId } from '@clark/core';
 import { forbidden, notFound, badRequest } from '../../errors.js';
 import { broadcastEvent } from '../ws/realtime.js';
 
@@ -69,7 +70,7 @@ export default async function shiftsRoutes(fastify: FastifyInstance): Promise<vo
       );
       if (existing) throw badRequest('Actor already has an active shift at this workstation');
 
-      const id = uuidv7();
+      const id = uuidv4();
       const now = new Date();
 
       await query(
@@ -79,10 +80,10 @@ export default async function shiftsRoutes(fastify: FastifyInstance): Promise<vo
       );
 
       const event = {
-        id: uuidv7(),
+        id: asId<EventId>(uuidv4()),
         type: 'shift.started' as const,
-        facilityId,
-        workstationId,
+        facilityId: asId<FacilityId>(facilityId),
+        workstationId: asId<WorkstationId>(workstationId),
         jobId: null,
         issueId: null,
         conversationId: null,
@@ -91,13 +92,13 @@ export default async function shiftsRoutes(fastify: FastifyInstance): Promise<vo
         actor: { actorId: request.actor.actorId, type: request.actor.type },
         occurredAt: now,
         recordedAt: now,
-        sourceType: 'human_ui' as const,
+        sourceType: SourceType.HumanUI,
         correlationId: null,
         causationId: null,
-        artifactRefs: [],
+        artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
         retentionClass: 'operational' as const,
-        metadata: {},
-        payload: { shiftId: id, facilityId, workstationId, operatorActorId: request.actor.actorId, startedAt: now },
+        metadata: {} as Record<string, unknown>,
+        payload: { shiftId: asId<ShiftId>(id), workstationId: asId<WorkstationId>(workstationId), operatorActorId: request.actor.actorId as ActorId },
       };
 
       await eventStore.append(`shift:${id}`, -1, [event]);
@@ -149,10 +150,10 @@ export default async function shiftsRoutes(fastify: FastifyInstance): Promise<vo
       );
 
       const event = {
-        id: uuidv7(),
+        id: asId<EventId>(uuidv4()),
         type: 'shift.handed_off' as const,
-        facilityId: shift.facility_id,
-        workstationId: shift.workstation_id,
+        facilityId: asId<FacilityId>(shift.facility_id),
+        workstationId: asId<WorkstationId>(shift.workstation_id),
         jobId: null,
         issueId: null,
         conversationId: null,
@@ -161,18 +162,18 @@ export default async function shiftsRoutes(fastify: FastifyInstance): Promise<vo
         actor: { actorId: request.actor.actorId, type: request.actor.type },
         occurredAt: now,
         recordedAt: now,
-        sourceType: 'human_ui' as const,
+        sourceType: SourceType.HumanUI,
         correlationId: null,
         causationId: null,
-        artifactRefs: [],
+        artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
         retentionClass: 'operational' as const,
-        metadata: {},
+        metadata: {} as Record<string, unknown>,
         payload: {
-          shiftId: id,
-          fromActorId: shift.operator_actor_id,
-          toActorId: handoffToActorId,
-          handoffNoteId: handoffNoteId ?? null,
-          endedAt: now,
+          shiftId: asId<ShiftId>(id),
+          workstationId: asId<WorkstationId>(shift.workstation_id),
+          fromActorId: asId<ActorId>(shift.operator_actor_id),
+          toActorId: asId<ActorId>(handoffToActorId),
+          handoffNoteId: handoffNoteId ? asId<NoteId>(handoffNoteId) : null,
         },
       };
 

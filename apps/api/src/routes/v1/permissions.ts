@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { v7 as uuidv7 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { query, queryOne } from '@clark/db';
 import { can } from '@clark/identity';
 import { PermissionCategory } from '@clark/core';
@@ -99,7 +99,7 @@ export default async function permissionsRoutes(fastify: FastifyInstance): Promi
       );
       if (!target) throw badRequest('Target actor not found');
 
-      const id = uuidv7();
+      const id = uuidv4();
 
       await query(
         `INSERT INTO permission_grants (
