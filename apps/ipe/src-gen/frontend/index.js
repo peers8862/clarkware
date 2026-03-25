@@ -81,8 +81,18 @@ module.exports = (async () => {
         }
     }
 
-    function start() {
+    async function start() {
         (window['theia'] = window['theia'] || {}).container = container;
-        return container.get(FrontendApplication).start();
+        await container.get(FrontendApplication).start();
+        try {
+            const { ApplicationShell, WidgetManager } = require('@theia/core/lib/browser');
+            const shell = container.get(ApplicationShell);
+            const wm = container.get(WidgetManager);
+            const widget = await wm.getOrCreateWidget('clark-main-panel');
+            await shell.addWidget(widget, { area: 'main' });
+            shell.activateWidget('clark-main-panel');
+        } catch (e) {
+            console.error('[Clark] Failed to open main panel:', e);
+        }
     }
 })();
