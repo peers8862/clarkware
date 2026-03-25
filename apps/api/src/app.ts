@@ -4,6 +4,7 @@ import fastifyHelmet from '@fastify/helmet';
 import dbPlugin from './plugins/db.js';
 import corsPlugin from './plugins/cors.js';
 import websocketPlugin from './plugins/websocket.js';
+import storagePlugin from './plugins/storage.js';
 import { errorHandler } from './errors.js';
 import { configSchema } from './config.js';
 
@@ -20,6 +21,7 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
   await fastify.register(corsPlugin);
   await fastify.register(fastifyHelmet);
   await fastify.register(dbPlugin);
+  await fastify.register(storagePlugin);
   await fastify.register(websocketPlugin);
 
   // 3. Global error handler
@@ -41,6 +43,7 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
 
       const routeFiles = [
         './routes/v1/facilities.js',
+        './routes/v1/workstations.js',
         './routes/v1/jobs.js',
         './routes/v1/notes.js',
         './routes/v1/events.js',
@@ -49,9 +52,8 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
         './routes/v1/presence.js',
         './routes/v1/shifts.js',
         './routes/v1/permissions.js',
-        // @clark/ai and @clark/storage are ESM-only — disabled until CJS build added
-        // './routes/v1/ai.js',
-        // './routes/v1/artifacts.js',
+        './routes/v1/ai.js',
+        './routes/v1/artifacts.js',
       ] as const;
 
       for (const file of routeFiles) {

@@ -17,6 +17,7 @@ export interface Job {
   workstation_id: string;
   job_type: string;
   priority: string;
+  human_ref: string | null;
   created_at: string;
 }
 
@@ -32,6 +33,33 @@ export interface Note {
   body: string;
   author_actor_id: string;
   created_at: string;
+}
+
+export interface Workstation {
+  id: string;
+  name: string;
+  facility_id: string;
+  zone_id: string;
+  station_type: string;
+  status: string;
+}
+
+export interface CreateJobParams {
+  title: string;
+  facilityId: string;
+  zoneId: string;
+  workstationId: string;
+  description?: string;
+  jobType?: string;
+  priority?: string;
+  humanRef?: string;
+}
+
+export interface UpdateJobParams {
+  title?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
 }
 
 export function getToken(): string | null {
@@ -65,13 +93,12 @@ export async function login(username: string, password: string): Promise<LoginRe
 
 async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getToken();
+  const headers: Record<string, string> = {};
+  if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
+    headers: { ...headers, ...init.headers as Record<string, string> },
   });
   return res;
 }
@@ -86,6 +113,59 @@ export async function fetchJob(id: string): Promise<JobDetail> {
   const res = await authFetch(`/jobs/${id}`);
   if (!res.ok) throw new Error(`Failed to load job (${res.status})`);
   return res.json() as Promise<JobDetail>;
+}
+
+export async function fetchWorkstations(): Promise<Workstation[]> {
+  const res = await authFetch('/workstations');
+  if (!res.ok) throw new Error(`Failed to load workstations (${res.status})`);
+  return res.json() as Promise<Workstation[]>;
+}
+
+export async function createJob(params: CreateJobParams): Promise<{ id: string; title: string; status: string }> {
+  const res = await authFetch('/jobs', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? `Failed to create job (${res.status})`);
+  }
+  return res.json() as Promise<{ id: string; title: string; status: string }>;
+}
+
+export async function startJob(id: string): Promise<void> {
+  const res = await authFetch(`/jobs/${id}/start`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? `Failed to start job (${res.status})`);
+  }
+}
+
+export async function resumeJob(id: string): Promise<void> {
+  const res = await authFetch(`/jobs/${id}/resume`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? `Failed to resume job (${res.status})`);
+  }
+}
+
+export async function reopenJob(id: string): Promise<void> {
+  const res = await authFetch(`/jobs/${id}/reopen`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? `Failed to reopen job (${res.status})`);
+  }
+}
+
+export async function updateJob(id: string, params: UpdateJobParams): Promise<void> {
+  const res = await authFetch(`/jobs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? `Failed to update job (${res.status})`);
+  }
 }
 
 export async function fetchNotes(jobId: string): Promise<Note[]> {
@@ -109,4 +189,9 @@ export async function postNote(jobId: string, body: string): Promise<Note> {
 /** Dispatch a job selection event across all widgets */
 export function selectJob(jobId: string, jobTitle: string): void {
   window.dispatchEvent(new CustomEvent('clark:job-selected', { detail: { jobId, jobTitle } }));
+}
+
+/** Dispatch a job list refresh event (e.g. after create or status change) */
+export function notifyJobListChanged(): void {
+  window.dispatchEvent(new CustomEvent('clark:jobs-changed'));
 }

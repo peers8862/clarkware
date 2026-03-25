@@ -5,5 +5,6 @@ import fastifyCors from '@fastify/cors';
 export default fp(async function corsPlugin(fastify: FastifyInstance) {
   await fastify.register(fastifyCors, {
     origin: process.env['NODE_ENV'] === 'production' ? false : true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 });

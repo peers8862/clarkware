@@ -5,10 +5,16 @@ export declare class ClarkWidget extends ReactWidget {
     static readonly ID = "clark-main-panel";
     static readonly LABEL = "Clark";
     private appState;
+    private form;
     constructor();
     private initialize;
     private doLogin;
+    private refreshJobs;
     private handleJobClick;
+    private toggleCreateForm;
+    private setFormField;
+    private handleCreateSubmit;
     protected render(): React.ReactNode;
     private renderBody;
+    private renderCreateForm;
 }
