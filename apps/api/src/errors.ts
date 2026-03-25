@@ -41,6 +41,7 @@ export function errorHandler(
   }
 
   const statusCode = error.statusCode ?? 500;
+  if (statusCode >= 500) console.error('[500 ERROR]', error.message, error.stack);
   void reply.status(statusCode).send({
     error: error.code ?? 'INTERNAL_ERROR',
     message: statusCode >= 500 ? 'Internal server error' : error.message,

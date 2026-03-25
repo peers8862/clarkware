@@ -1,6 +1,6 @@
 import { ContainerModule } from '@theia/core/shared/inversify';
 import { WidgetFactory } from '@theia/core/lib/browser';
-import { MessagingWidget, MESSAGING_WIDGET_ID } from './messaging-widget.js';
+import { MessagingWidget, MESSAGING_WIDGET_ID } from './messaging-widget';
 
 export const ClarkMessagingModule = new ContainerModule((bind) => {
   bind(MessagingWidget).toSelf();
@@ -9,3 +9,5 @@ export const ClarkMessagingModule = new ContainerModule((bind) => {
     createWidget: () => ctx.container.get(MessagingWidget),
   })).inSingletonScope();
 });
+
+export default ClarkMessagingModule;

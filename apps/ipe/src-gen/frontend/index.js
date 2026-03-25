@@ -1,0 +1,109 @@
+// @ts-check
+require('reflect-metadata');
+const { Container } = require('@theia/core/shared/inversify');
+const { FrontendApplicationConfigProvider } = require('@theia/core/lib/browser/frontend-application-config-provider');
+
+FrontendApplicationConfigProvider.set({
+    "applicationName": "Clark IPE",
+    "defaultTheme": {
+        "light": "light",
+        "dark": "dark"
+    },
+    "defaultIconTheme": "theia-file-icons",
+    "electron": {
+        "windowOptions": {},
+        "showWindowEarly": true,
+        "splashScreenOptions": {},
+        "uriScheme": "theia"
+    },
+    "defaultLocale": "",
+    "validatePreferencesSchema": true,
+    "reloadOnReconnect": true,
+    "uriScheme": "theia"
+});
+
+
+
+function load(container, jsModule) {
+    return Promise.resolve(jsModule)
+        .then(containerModule => container.load(containerModule.default));
+}
+
+async function preload(container) {
+    try {
+        await load(container, require('@theia/core/lib/browser/preload/preload-module'));
+        const { Preloader } = require('@theia/core/lib/browser/preload/preloader');
+        const preloader = container.get(Preloader);
+        await preloader.initialize();
+    } catch (reason) {
+        console.error('Failed to run preload scripts.');
+        if (reason) {
+            console.error(reason);
+        }
+    }
+}
+
+module.exports = (async () => {
+    const { messagingFrontendModule } = require('@theia/core/lib/browser/messaging/messaging-frontend-module');
+    const container = new Container();
+    container.load(messagingFrontendModule);
+    
+
+    await preload(container);
+
+    ;
+
+    const { FrontendApplication } = require('@theia/core/lib/browser');
+    const { frontendApplicationModule } = require('@theia/core/lib/browser/frontend-application-module');    
+    const { loggerFrontendModule } = require('@theia/core/lib/browser/logger-frontend-module');
+
+    container.load(frontendApplicationModule);
+    undefined
+    
+    container.load(loggerFrontendModule);
+    
+
+    try {
+        await load(container, require('@theia/core/lib/browser/i18n/i18n-frontend-module'));
+        await load(container, require('@theia/core/lib/browser/menu/browser-menu-module'));
+        await load(container, require('@theia/core/lib/browser/window/browser-window-module'));
+        await load(container, require('@theia/core/lib/browser/keyboard/browser-keyboard-module'));
+        await load(container, require('@theia/core/lib/browser/request/browser-request-module'));
+        await load(container, require('@theia/messages/lib/browser/messages-frontend-module'));
+        await load(container, require('clark-core-extension/lib/frontend-module'));
+        await load(container, require('clark-messaging-extension/lib/frontend-module'));
+        ;
+        await start();
+    } catch (reason) {
+        console.error('Failed to start the frontend application.');
+        if (reason) {
+            console.error(reason);
+        }
+    }
+
+    async function start() {
+        (window['theia'] = window['theia'] || {}).container = container;
+        await container.get(FrontendApplication).start();
+        try {
+            const { ApplicationShell, WidgetManager } = require('@theia/core/lib/browser');
+            const shell = container.get(ApplicationShell);
+            const wm = container.get(WidgetManager);
+            // Main area: Clark primary panel
+            const main = await wm.getOrCreateWidget('clark-main-panel');
+            await shell.addWidget(main, { area: 'main' });
+            shell.activateWidget('clark-main-panel');
+            // Left sidebar: Job context
+            const jobCtx = await wm.getOrCreateWidget('clark-job-context');
+            await shell.addWidget(jobCtx, { area: 'left', rank: 100 });
+            await shell.activateWidget('clark-job-context');
+            // Bottom panel: Notes + Messaging as tabs
+            const notes = await wm.getOrCreateWidget('clark-notes');
+            await shell.addWidget(notes, { area: 'bottom', rank: 100 });
+            const messaging = await wm.getOrCreateWidget('clark-messaging');
+            await shell.addWidget(messaging, { area: 'bottom', rank: 200 });
+            shell.activateWidget('clark-notes');
+        } catch (e) {
+            console.error('[Clark] Failed to open panels:', e);
+        }
+    }
+})();

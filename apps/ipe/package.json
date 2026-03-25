@@ -12,19 +12,18 @@
   },
   "scripts": {
     "build": "theia build",
-    "start": "theia start",
+    "start": "theia start --port 3001",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@theia/core": "^1.50.0",
     "@theia/messages": "^1.50.0",
-    "@theia/navigator": "^1.50.0",
-    "@theia/filesystem": "^1.50.0",
-    "clark-core-extension": "workspace:src/extensions/clark-core-extension",
-    "clark-messaging-extension": "workspace:src/extensions/clark-messaging-extension"
+    "clark-core-extension": "workspace:*",
+    "clark-messaging-extension": "workspace:*"
   },
   "devDependencies": {
     "@theia/cli": "^1.50.0",
-    "typescript": "~5.4.5"
+    "typescript": "~5.4.5",
+    "webpack": "^5.0.0"
   }
 }

@@ -1,16 +1,21 @@
-import type { ConversationId, JobId, PersonId } from '../common/branded.js';
+import type { ConversationId, FacilityId, ZoneId, WorkstationId, JobId, IssueId } from '../common/branded.js';
 import type { SoftDeletable } from '../common/timestamps.js';
+import type { ConversationType } from '../common/enums.js';
 
-export type ConversationType = 'job_thread' | 'direct';
+export type ConversationStatus = 'active' | 'archived' | 'closed';
 
 export interface Conversation extends SoftDeletable {
   readonly id: ConversationId;
   readonly type: ConversationType;
+  readonly facilityId: FacilityId | null;
+  readonly zoneId: ZoneId | null;
+  readonly workstationId: WorkstationId | null;
   readonly jobId: JobId | null;
+  readonly issueId: IssueId | null;
+  readonly title: string | null;
+  readonly status: ConversationStatus;
   readonly xmppRoomJid: string;
-  readonly subject: string | null;
-  readonly participantIds: ReadonlyArray<PersonId>;
   readonly metadata: Record<string, unknown>;
 }
 
-export type ConversationCreateInput = Omit<Conversation, 'id' | 'participantIds' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
+export type ConversationCreateInput = Omit<Conversation, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'>;

@@ -2,3 +2,13 @@ packages:
   - "packages/*"
   - "apps/*"
   - "apps/ipe/src/extensions/*"
+allowBuilds:
+  '@parcel/watcher': true
+  '@theia/ffmpeg': true
+  argon2: true
+  core-js: true
+  drivelist: true
+  esbuild: true
+  keytar: true
+  msgpackr-extract: true
+  puppeteer: true

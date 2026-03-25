@@ -1,9 +1,12 @@
 import { SignJWT, jwtVerify } from 'jose';
+import type { ActorType } from '@clark/core';
 
 export interface TokenPayload {
-  sub: string;       // PersonId
+  sub: string;            // actorId (unified actors table PK)
+  actorType: ActorType;   // discriminator — human_user | ai_agent | automation_service
   type: 'access' | 'refresh';
   roles: string[];
+  facilityId?: string;    // primary facility, if single-facility actor
 }
 
 function getSecret(key: string): Uint8Array {
