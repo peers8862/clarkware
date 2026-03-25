@@ -88,11 +88,22 @@ module.exports = (async () => {
             const { ApplicationShell, WidgetManager } = require('@theia/core/lib/browser');
             const shell = container.get(ApplicationShell);
             const wm = container.get(WidgetManager);
-            const widget = await wm.getOrCreateWidget('clark-main-panel');
-            await shell.addWidget(widget, { area: 'main' });
+            // Main area: Clark primary panel
+            const main = await wm.getOrCreateWidget('clark-main-panel');
+            await shell.addWidget(main, { area: 'main' });
             shell.activateWidget('clark-main-panel');
+            // Left sidebar: Job context
+            const jobCtx = await wm.getOrCreateWidget('clark-job-context');
+            await shell.addWidget(jobCtx, { area: 'left', rank: 100 });
+            await shell.activateWidget('clark-job-context');
+            // Bottom panel: Notes + Messaging as tabs
+            const notes = await wm.getOrCreateWidget('clark-notes');
+            await shell.addWidget(notes, { area: 'bottom', rank: 100 });
+            const messaging = await wm.getOrCreateWidget('clark-messaging');
+            await shell.addWidget(messaging, { area: 'bottom', rank: 200 });
+            shell.activateWidget('clark-notes');
         } catch (e) {
-            console.error('[Clark] Failed to open main panel:', e);
+            console.error('[Clark] Failed to open panels:', e);
         }
     }
 })();

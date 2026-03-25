@@ -12,13 +12,18 @@ const eventStore = new EventStore();
 
 export default async function jobsRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/jobs', async (request) => {
-    if (!can(request.actor, PermissionCategory.View, { level: 'facility', facilityId: '*' })) {
-      throw forbidden();
+    try {
+      if (!can(request.actor, PermissionCategory.View, { level: 'facility', facilityId: '*' })) {
+        throw forbidden();
+      }
+      return await query(
+        `SELECT id, title, status, facility_id, workstation_id, job_type, priority, human_ref, created_at
+         FROM jobs WHERE deleted_at IS NULL ORDER BY created_at DESC`,
+      );
+    } catch (err) {
+      console.error('[GET /jobs] ERROR:', err);
+      throw err;
     }
-    return query(
-      `SELECT id, title, status, facility_id, workstation_id, job_type, priority, human_ref, created_at
-       FROM jobs WHERE deleted_at IS NULL ORDER BY created_at DESC`,
-    );
   });
 
   fastify.get<{ Params: { id: string } }>('/jobs/:id', async (request) => {

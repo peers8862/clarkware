@@ -113,7 +113,7 @@ importers:
   apps/ipe/src/extensions/clark-core-extension:
     dependencies:
       '@theia/core':
-        specifier: ^1.50.0
+        specifier: 1.69.0
         version: 1.69.0
       react:
         specifier: ^18.0.0
@@ -135,8 +135,11 @@ importers:
   apps/ipe/src/extensions/clark-messaging-extension:
     dependencies:
       '@theia/core':
-        specifier: ^1.50.0
+        specifier: 1.69.0
         version: 1.69.0
+      clark-core-extension:
+        specifier: workspace:*
+        version: link:../clark-core-extension
       react:
         specifier: ^18.0.0
         version: 18.3.1

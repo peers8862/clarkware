@@ -14,48 +14,75 @@ exports.NotesWidget = exports.NOTES_WIDGET_ID = void 0;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const inversify_1 = require("@theia/core/shared/inversify");
 const widgets_1 = require("@theia/core/lib/browser/widgets");
+const clark_api_1 = require("./clark-api");
 exports.NOTES_WIDGET_ID = 'clark-notes';
 let NotesWidget = NotesWidget_1 = class NotesWidget extends widgets_1.ReactWidget {
     constructor() {
         super();
         this.notes = [];
         this.jobId = null;
+        this.jobTitle = null;
+        this.loading = false;
+        this.submitting = false;
+        this.error = null;
         this.inputValue = '';
         this.id = exports.NOTES_WIDGET_ID;
         this.title.label = NotesWidget_1.LABEL;
         this.title.closable = false;
         this.update();
+        window.addEventListener('clark:job-selected', (e) => {
+            const { jobId, jobTitle } = e.detail;
+            this.loadNotes(jobId, jobTitle);
+        });
     }
-    setJobId(jobId) {
+    async loadNotes(jobId, jobTitle) {
         this.jobId = jobId;
+        this.jobTitle = jobTitle;
         this.notes = [];
+        this.loading = true;
+        this.error = null;
+        this.update();
+        try {
+            this.notes = await (0, clark_api_1.fetchNotes)(jobId);
+        }
+        catch (e) {
+            this.error = String(e);
+        }
+        this.loading = false;
         this.update();
     }
-    addNote(note) {
-        this.notes = [note, ...this.notes];
+    async submitNote() {
+        if (!this.inputValue.trim() || !this.jobId || this.submitting)
+            return;
+        const body = this.inputValue.trim();
+        this.submitting = true;
+        this.inputValue = '';
+        this.error = null;
+        this.update();
+        try {
+            const note = await (0, clark_api_1.postNote)(this.jobId, body);
+            this.notes = [note, ...this.notes];
+        }
+        catch (e) {
+            this.error = String(e);
+        }
+        this.submitting = false;
         this.update();
     }
     render() {
-        return ((0, jsx_runtime_1.jsxs)("div", { className: "clark-notes", style: { display: 'flex', flexDirection: 'column', height: '100%', padding: '12px 16px' }, children: [(0, jsx_runtime_1.jsxs)("div", { style: { fontWeight: 600, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', color: 'var(--theia-descriptionForeground)' }, children: ["Notes ", this.jobId ? `— ${this.jobId}` : ''] }), (0, jsx_runtime_1.jsx)("div", { style: { flex: 1, overflowY: 'auto', marginBottom: '8px' }, children: this.notes.length === 0 ? ((0, jsx_runtime_1.jsx)("p", { style: { color: 'var(--theia-descriptionForeground)', fontSize: '13px' }, children: "No notes yet." })) : (this.notes.map((note) => ((0, jsx_runtime_1.jsxs)("div", { style: { padding: '8px', marginBottom: '6px', background: 'var(--theia-editor-background)', borderRadius: '4px', fontSize: '13px' }, children: [(0, jsx_runtime_1.jsx)("div", { style: { color: 'var(--theia-foreground)' }, children: note.body }), (0, jsx_runtime_1.jsx)("div", { style: { fontSize: '11px', color: 'var(--theia-descriptionForeground)', marginTop: '4px' }, children: new Date(note.createdAt).toLocaleString() })] }, note.id)))) }), this.jobId && ((0, jsx_runtime_1.jsxs)("div", { style: { display: 'flex', gap: '6px' }, children: [(0, jsx_runtime_1.jsx)("input", { style: {
-                                flex: 1, padding: '6px 8px', fontSize: '13px',
+        return ((0, jsx_runtime_1.jsxs)("div", { style: { display: 'flex', flexDirection: 'column', height: '100%', padding: '10px 14px' }, children: [(0, jsx_runtime_1.jsxs)("div", { style: sectionLabel, children: ["Notes ", this.jobTitle ? `— ${this.jobTitle}` : ''] }), this.error && ((0, jsx_runtime_1.jsx)("div", { style: { fontSize: '11px', color: 'var(--theia-errorForeground)', marginBottom: '6px' }, children: this.error })), (0, jsx_runtime_1.jsxs)("div", { style: { flex: 1, overflowY: 'auto', marginBottom: '8px' }, children: [this.loading && (0, jsx_runtime_1.jsx)("p", { style: muted, children: "Loading notes\u2026" }), !this.loading && !this.jobId && (0, jsx_runtime_1.jsx)("p", { style: muted, children: "Select a job to view notes." }), !this.loading && this.jobId && this.notes.length === 0 && ((0, jsx_runtime_1.jsx)("p", { style: muted, children: "No notes yet." })), this.notes.map(note => ((0, jsx_runtime_1.jsxs)("div", { style: {
+                                padding: '7px 10px', marginBottom: '5px',
+                                background: 'var(--theia-editor-background)',
+                                borderRadius: '3px', fontSize: '12px',
+                                border: '1px solid var(--theia-border-color)',
+                            }, children: [(0, jsx_runtime_1.jsx)("div", { style: { color: 'var(--theia-foreground)' }, children: note.body }), (0, jsx_runtime_1.jsxs)("div", { style: { fontSize: '10px', color: 'var(--theia-descriptionForeground)', marginTop: '3px' }, children: [note.author_actor_id, " \u00B7 ", new Date(note.created_at).toLocaleString()] })] }, note.id)))] }), this.jobId && ((0, jsx_runtime_1.jsxs)("div", { style: { display: 'flex', gap: '6px' }, children: [(0, jsx_runtime_1.jsx)("input", { style: {
+                                flex: 1, padding: '5px 8px', fontSize: '12px',
                                 background: 'var(--theia-input-background)',
                                 color: 'var(--theia-input-foreground)',
                                 border: '1px solid var(--theia-input-border)',
                                 borderRadius: '3px',
-                            }, placeholder: "Add a note\u2026", value: this.inputValue, onChange: (e) => { this.inputValue = e.target.value; } }), (0, jsx_runtime_1.jsx)("button", { style: { padding: '6px 12px', fontSize: '13px', cursor: 'pointer' }, onClick: () => this.submitNote(), children: "Add" })] }))] }));
-    }
-    submitNote() {
-        if (!this.inputValue.trim() || !this.jobId)
-            return;
-        // In production this would call the API — placeholder for Phase 1
-        this.addNote({
-            id: Date.now().toString(),
-            body: this.inputValue.trim(),
-            authorId: 'local',
-            createdAt: new Date().toISOString(),
-        });
-        this.inputValue = '';
-        this.update();
+                            }, placeholder: "Add a note\u2026", value: this.inputValue, disabled: this.submitting, onChange: (e) => { this.inputValue = e.target.value; this.update(); }, onKeyDown: (e) => { if (e.key === 'Enter')
+                                void this.submitNote(); } }), (0, jsx_runtime_1.jsx)("button", { style: { padding: '5px 10px', fontSize: '12px', cursor: 'pointer' }, disabled: this.submitting, onClick: () => void this.submitNote(), children: this.submitting ? '…' : 'Add' })] }))] }));
     }
 };
 exports.NotesWidget = NotesWidget;
@@ -65,3 +92,11 @@ exports.NotesWidget = NotesWidget = NotesWidget_1 = __decorate([
     (0, inversify_1.injectable)(),
     __metadata("design:paramtypes", [])
 ], NotesWidget);
+const sectionLabel = {
+    fontWeight: 600, fontSize: '11px', textTransform: 'uppercase',
+    letterSpacing: '0.05em', marginBottom: '8px',
+    color: 'var(--theia-descriptionForeground)',
+};
+const muted = {
+    color: 'var(--theia-descriptionForeground)', fontSize: '12px', margin: 0,
+};

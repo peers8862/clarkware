@@ -8,7 +8,7 @@ import { errorHandler } from './errors.js';
 import { configSchema } from './config.js';
 
 export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
-  const fastify = Fastify({ logger: true });
+  const fastify = Fastify({ logger: true, pluginTimeout: 60000 });
 
   // 1. Environment validation (must be first)
   await fastify.register(fastifyEnv, {
@@ -39,43 +39,25 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
     async (protected_) => {
       await protected_.register(authPlugin.default);
 
-      const [
-        facilitiesRoutes,
-        jobsRoutes,
-        notesRoutes,
-        eventsRoutes,
-        issuesRoutes,
-        conversationsRoutes,
-        presenceRoutes,
-        shiftsRoutes,
-        permissionsRoutes,
-        aiRoutes,
-        artifactsRoutes,
-      ] = await Promise.all([
-        import('./routes/v1/facilities.js'),
-        import('./routes/v1/jobs.js'),
-        import('./routes/v1/notes.js'),
-        import('./routes/v1/events.js'),
-        import('./routes/v1/issues.js'),
-        import('./routes/v1/conversations.js'),
-        import('./routes/v1/presence.js'),
-        import('./routes/v1/shifts.js'),
-        import('./routes/v1/permissions.js'),
-        import('./routes/v1/ai.js'),
-        import('./routes/v1/artifacts.js'),
-      ]);
+      const routeFiles = [
+        './routes/v1/facilities.js',
+        './routes/v1/jobs.js',
+        './routes/v1/notes.js',
+        './routes/v1/events.js',
+        './routes/v1/issues.js',
+        './routes/v1/conversations.js',
+        './routes/v1/presence.js',
+        './routes/v1/shifts.js',
+        './routes/v1/permissions.js',
+        // @clark/ai and @clark/storage are ESM-only — disabled until CJS build added
+        // './routes/v1/ai.js',
+        // './routes/v1/artifacts.js',
+      ] as const;
 
-      await protected_.register(facilitiesRoutes.default);
-      await protected_.register(jobsRoutes.default);
-      await protected_.register(notesRoutes.default);
-      await protected_.register(eventsRoutes.default);
-      await protected_.register(issuesRoutes.default);
-      await protected_.register(conversationsRoutes.default);
-      await protected_.register(presenceRoutes.default);
-      await protected_.register(shiftsRoutes.default);
-      await protected_.register(permissionsRoutes.default);
-      await protected_.register(aiRoutes.default);
-      await protected_.register(artifactsRoutes.default);
+      for (const file of routeFiles) {
+        const mod = await import(file);
+        await protected_.register(mod.default);
+      }
     },
     { prefix: '/v1' },
   );

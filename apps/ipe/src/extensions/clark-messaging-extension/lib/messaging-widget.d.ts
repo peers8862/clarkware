@@ -7,10 +7,11 @@ export declare class MessagingWidget extends ReactWidget {
     private messages;
     private connected;
     private ws;
-    private streamId;
+    private jobId;
+    private jobTitle;
     private inputValue;
     constructor();
-    connectToStream(streamId: string, apiBaseUrl?: string): void;
-    protected render(): React.ReactNode;
+    private connectToJob;
     private send;
+    protected render(): React.ReactNode;
 }

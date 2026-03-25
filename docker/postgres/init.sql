@@ -684,7 +684,7 @@ VALUES (
   'admin@clark.local',
   'Administrator',
   -- argon2id hash of 'admin_dev_password' — REPLACE before production
-  '$argon2id$v=19$m=65536,t=3,p=4$placeholder',
+  '$argon2id$v=19$m=65536,t=3,p=4$YNZ9kUPSqYTVhpQl3wQCrQ$qv3HMRvk1ZYKmE1Kto3F134P6gfoNwip1yNASposzdo',
   'employee',
   'active'
 ) ON CONFLICT DO NOTHING;
