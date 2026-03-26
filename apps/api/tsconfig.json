@@ -7,9 +7,12 @@
   "include": ["src/**/*"],
   "references": [
     { "path": "../../packages/core" },
+    { "path": "../../packages/cfx" },
     { "path": "../../packages/db" },
     { "path": "../../packages/events" },
     { "path": "../../packages/identity" },
+    { "path": "../../packages/firmware-utils" },
+    { "path": "../../packages/ipc-criteria" },
     { "path": "../../packages/storage" },
     { "path": "../../packages/messaging" }
   ]

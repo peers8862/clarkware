@@ -9,3 +9,12 @@ dist/
 *.log
 coverage/
 .DS_Store
+
+# Theia webpack bundle — rebuilt by webpack after 'theia build'
+# (lib/backend/ stays tracked so the IPE can be launched without a full rebuild)
+apps/ipe/lib/frontend/bundle.js
+apps/ipe/lib/frontend/bundle.js.gz
+apps/ipe/lib/frontend/bundle.js.map
+# Theia generated frontend entry point — rebuilt by 'theia build'
+# Panel layout is now in clark-core-extension/src/frontend-module.ts — no manual patch needed
+apps/ipe/src-gen/

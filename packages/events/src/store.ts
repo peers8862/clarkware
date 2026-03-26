@@ -136,6 +136,75 @@ export class EventStore {
     });
   }
 
+  /**
+   * Append events using an existing PoolClient (already inside a transaction).
+   * Use this when you need the event append and an outbox/side-effect write to
+   * be atomic — both in the same BEGIN/COMMIT block opened by the caller.
+   */
+  async appendWithClient(
+    client: pg.PoolClient,
+    streamId: string,
+    expectedVersion: number,
+    events: Omit<DomainEvent, 'streamId' | 'sequenceNumber'>[],
+  ): Promise<void> {
+    if (events.length === 0) return;
+
+    const versionResult = await client.query<{ max_seq: string | null }>(
+      'SELECT MAX(sequence_number) as max_seq FROM events WHERE stream_id = $1',
+      [streamId],
+    );
+    const currentVersion =
+      versionResult.rows[0]?.max_seq != null
+        ? Number(versionResult.rows[0].max_seq)
+        : -1;
+
+    if (currentVersion !== expectedVersion) {
+      throw new ConcurrencyError(streamId, expectedVersion, currentVersion);
+    }
+
+    let seq = expectedVersion + 1;
+    for (const event of events) {
+      await client.query(
+        `INSERT INTO events (
+           id, stream_id, sequence_number, type,
+           facility_id, workstation_id, job_id, issue_id, conversation_id,
+           actor_id, actor_type, source_type,
+           correlation_id, causation_id,
+           occurred_at, recorded_at,
+           payload, artifact_refs, retention_class, metadata
+         ) VALUES (
+           $1, $2, $3, $4,
+           $5, $6, $7, $8, $9,
+           $10, $11, $12,
+           $13, $14,
+           $15, now(),
+           $16, $17, $18, $19
+         )`,
+        [
+          event.id,
+          streamId,
+          seq++,
+          event.type,
+          event.facilityId ?? null,
+          event.workstationId ?? null,
+          event.jobId ?? null,
+          event.issueId ?? null,
+          event.conversationId ?? null,
+          event.actor.actorId,
+          event.actor.type,
+          event.sourceType ?? SourceType.System,
+          event.correlationId ?? null,
+          event.causationId ?? null,
+          event.occurredAt,
+          JSON.stringify(event.payload),
+          event.artifactRefs ?? [],
+          event.retentionClass ?? 'operational',
+          JSON.stringify(event.metadata ?? {}),
+        ],
+      );
+    }
+  }
+
   async readStream(streamId: string, fromSequence = 0): Promise<DomainEvent[]> {
     const rows = await query<RawEventRow>(
       `SELECT * FROM events

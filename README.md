@@ -19,6 +19,7 @@ clark/
     ├── identity/     — Auth: JWT signing/verification, password hashing, RBAC
     ├── events/       — Append-only domain event store
     ├── ai/           — Anthropic Claude integration: summarisation, note drafting, alert routing
+    ├── cfx/          — IPC-CFX AMQP publisher: CFXClient, CFX_MESSAGES constants
     ├── storage/      — MinIO object storage client and presigned URL helpers
     ├── messaging/    — XMPP client, room manager, sync engine
     └── reporting/    — Job summary queries (foundation for reporting views)
@@ -47,6 +48,7 @@ External services (all containerised):
 | Prosody | XMPP messaging server | 5222 |
 | OpenSearch | Full-text search and log indexing | 9200 |
 | OpenSearch Dashboards | Search analytics UI | 5601 |
+| RabbitMQ 3.13 | IPC-CFX AMQP message broker | 5672 (AMQP), 15672 (management UI) |
 
 ---
 
@@ -227,13 +229,10 @@ PostgreSQL 16 with an append-only event store. Key tables:
 
 ## Known Patches and Workarounds
 
-### 1. `src-gen/frontend/index.js` — manually patched `start()` function
+### 1. ~~`src-gen/frontend/index.js` — manually patched `start()` function~~ **FIXED**
 
-**What:** Eclipse Theia generates this file when you run `theia build`. The standard `FrontendApplicationContribution.initializeLayout()` hook did not fire reliably, so the generated `start()` function has been extended by hand to explicitly open and position the four Clark panels (main, job context, notes, messages) after `FrontendApplication.start()` resolves.
-
-**Risk:** Running `theia build` again will regenerate this file and wipe the patch. After any Theia rebuild you must re-patch the `start()` function manually before running webpack.
-
-**Location:** `apps/ipe/src-gen/frontend/index.js`, the `start()` function at the bottom of the file.
+Panel layout is now handled by `ClarkFrontendContribution.onStart()` in `clark-core-extension/src/frontend-module.ts`.
+`apps/ipe/src-gen/` is gitignored — `theia build` regenerates it cleanly without any manual patch required.
 
 ### 2. Auto-login is hardcoded
 
@@ -354,9 +353,11 @@ The `-v` flag removes named volumes, triggering a fresh `init.sql` run on next s
 | 3000 | Clark API (REST + WebSocket) |
 | 3001 | Clark IPE browser shell |
 | 5432 | PostgreSQL |
+| 5672 | RabbitMQ AMQP (IPC-CFX broker) |
 | 9000 | MinIO S3 API |
 | 9001 | MinIO web console |
 | 5222 | XMPP — Prosody client connections |
 | 5280 | XMPP HTTP — Prosody HTTP API |
 | 9200 | OpenSearch |
 | 5601 | OpenSearch Dashboards |
+| 15672 | RabbitMQ management UI (dev only) |

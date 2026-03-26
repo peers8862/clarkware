@@ -53,6 +53,7 @@ module.exports = async (port, host, argv) => {
         await load(require('@theia/core/lib/node/hosting/backend-hosting-module'));
         await load(require('@theia/core/lib/node/request/backend-request-module'));
         await load(require('@theia/messages/lib/node/messages-backend-module'));
+        await load(require('clark-cfx-extension/lib/node/cfx-backend-module'));
         return await start(port, host, argv);
     } catch (error) {
         if (typeof error !== 'number') {

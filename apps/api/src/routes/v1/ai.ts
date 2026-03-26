@@ -5,36 +5,25 @@ import {
   summarizeIssue,
   draftNote,
   routeAlert,
-  updateReviewState,
+  buildReviewStateUpdate,
 } from '@clark/ai';
 import type { JobContext, IssueContext, NoteDraftContext, AlertInput, ReviewableRecord } from '@clark/ai';
+import { query } from '@clark/db';
 import { badRequest } from '../../errors.js';
 
 export default async function aiRoutes(fastify: FastifyInstance): Promise<void> {
-  /**
-   * POST /v1/ai/summarize-job
-   * Body: JobContext
-   */
   fastify.post<{ Body: JobContext }>('/ai/summarize-job', async (request) => {
     const ctx = request.body;
     if (!ctx.jobId) throw badRequest('jobId is required');
     return summarizeJob(ctx);
   });
 
-  /**
-   * POST /v1/ai/summarize-issue
-   * Body: IssueContext
-   */
   fastify.post<{ Body: IssueContext }>('/ai/summarize-issue', async (request) => {
     const ctx = request.body;
     if (!ctx.issueId) throw badRequest('issueId is required');
     return summarizeIssue(ctx);
   });
 
-  /**
-   * POST /v1/ai/draft-note
-   * Body: NoteDraftContext
-   */
   fastify.post<{ Body: NoteDraftContext }>('/ai/draft-note', async (request) => {
     const ctx = request.body;
     if (!ctx.noteType) throw badRequest('noteType is required');
@@ -44,10 +33,6 @@ export default async function aiRoutes(fastify: FastifyInstance): Promise<void> 
     return draftNote(ctx);
   });
 
-  /**
-   * POST /v1/ai/route-alert
-   * Body: AlertInput
-   */
   fastify.post<{ Body: AlertInput }>('/ai/route-alert', async (request) => {
     const alert = request.body;
     if (!alert.message) throw badRequest('message is required');
@@ -58,7 +43,9 @@ export default async function aiRoutes(fastify: FastifyInstance): Promise<void> 
 
   /**
    * POST /v1/ai/review
-   * Body: { id: string; recordType: 'note' | 'message'; currentState: ReviewState; newState: ReviewState }
+   * Validates the review state transition and persists it.
+   * The AI package is responsible only for the validation — this route owns the persistence
+   * because the notes and messages tables belong to their respective contexts (Notes, Conversations).
    */
   fastify.post<{
     Body: {
@@ -75,14 +62,18 @@ export default async function aiRoutes(fastify: FastifyInstance): Promise<void> 
     }
     if (!newState) throw badRequest('newState is required');
 
-    const record: ReviewableRecord = {
-      id,
-      recordType,
-      reviewState: currentState,
-    };
+    const record: ReviewableRecord = { id, recordType, reviewState: currentState };
+    const update = buildReviewStateUpdate(record, newState, request.actor.actorId);
 
-    const reviewerActorId = request.actor.actorId;
-    await updateReviewState(record, newState, reviewerActorId);
+    // This route owns the DB write — the AI package does not touch the database
+    const table = update.recordType === 'note' ? 'notes' : 'messages';
+    await query(
+      `UPDATE ${table}
+       SET review_state = $1, reviewed_by = $2, reviewed_at = $3
+       WHERE id = $4`,
+      [update.newState, update.reviewedBy, update.reviewedAt, update.recordId],
+    );
+
     return { ok: true };
   });
 }

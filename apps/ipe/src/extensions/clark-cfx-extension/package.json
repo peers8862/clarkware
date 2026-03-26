@@ -1,0 +1,24 @@
+{
+  "name": "clark-cfx-extension",
+  "version": "0.1.0",
+  "private": true,
+  "keywords": ["theia-extension"],
+  "theiaExtensions": [
+    {
+      "frontend": "lib/browser/cfx-frontend-module",
+      "backend": "lib/node/cfx-backend-module"
+    }
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@theia/core": "1.69.0",
+    "amqplib": "^0.10.4"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "typescript": "~5.4.5"
+  }
+}

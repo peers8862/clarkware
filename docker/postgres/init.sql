@@ -710,3 +710,109 @@ VALUES (
   'actor_system',
   'Bootstrap seed grant'
 ) ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- SECTION: CFX outbox — durable queue for IPC-CFX AMQP messages
+-- Messages are written here first; a background flush loop delivers
+-- them to the RabbitMQ broker. This ensures CFX delivery survives
+-- IPE restarts and broker connectivity gaps.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS cfx_outbox (
+  id              BIGSERIAL   PRIMARY KEY,
+  message_name    TEXT        NOT NULL,
+  routing_key     TEXT        NOT NULL,
+  payload         JSONB       NOT NULL,
+  status          TEXT        NOT NULL DEFAULT 'pending'
+                  CHECK (status IN ('pending', 'delivered', 'dead')),
+  attempts        INT         NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  delivered_at    TIMESTAMPTZ,
+  error           TEXT
+);
+
+CREATE INDEX IF NOT EXISTS cfx_outbox_pending_idx
+  ON cfx_outbox (created_at)
+  WHERE status = 'pending';
+
+-- ============================================================
+-- SECTION 17: Inspection bounded context
+-- Owned exclusively by InspectionService.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS inspection_steps (
+  id             TEXT        PRIMARY KEY,
+  job_id         TEXT        NOT NULL REFERENCES jobs(id),
+  step_index     INT         NOT NULL,
+  step_type      TEXT        NOT NULL,
+  assembly_class TEXT        NOT NULL CHECK (assembly_class IN ('1', '2', '3')),
+  status         TEXT        NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending', 'in_progress', 'complete')),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at   TIMESTAMPTZ,
+  CONSTRAINT inspection_steps_job_index_unique UNIQUE (job_id, step_index)
+);
+
+CREATE INDEX IF NOT EXISTS inspection_steps_job_idx ON inspection_steps (job_id, step_index ASC);
+CREATE INDEX IF NOT EXISTS inspection_steps_status_idx ON inspection_steps (status);
+
+CREATE TABLE IF NOT EXISTS inspection_results (
+  id                   TEXT        PRIMARY KEY,
+  step_id              TEXT        NOT NULL REFERENCES inspection_steps(id),
+  job_id               TEXT        NOT NULL REFERENCES jobs(id),
+  criterion_id         TEXT        NOT NULL,
+  result               TEXT        NOT NULL
+                       CHECK (result IN ('Pass', 'Fail', 'ProcessIndicator', 'NotEvaluated')),
+  notes                TEXT,
+  evidence_artifact_id TEXT        REFERENCES artifacts(id),
+  operator_id          TEXT        NOT NULL REFERENCES actors(id),
+  recorded_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS inspection_results_step_idx ON inspection_results (step_id, recorded_at ASC);
+CREATE INDEX IF NOT EXISTS inspection_results_job_idx  ON inspection_results (job_id);
+CREATE INDEX IF NOT EXISTS inspection_results_fail_idx ON inspection_results (step_id) WHERE result = 'Fail';
+
+CREATE TABLE IF NOT EXISTS defect_records (
+  id                TEXT        PRIMARY KEY,
+  step_id           TEXT        NOT NULL REFERENCES inspection_steps(id),
+  job_id            TEXT        NOT NULL REFERENCES jobs(id),
+  criterion_id      TEXT        NOT NULL,
+  description       TEXT        NOT NULL,
+  disposition       TEXT        CHECK (disposition IN ('Repair', 'Reject', 'UseAsIs', 'CustomerWaiver')),
+  disposition_note  TEXT,
+  disposition_by    TEXT        REFERENCES actors(id),
+  disposition_at    TIMESTAMPTZ,
+  status            TEXT        NOT NULL DEFAULT 'open'
+                    CHECK (status IN ('open', 'dispositioned', 'closed')),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS defect_records_job_idx    ON defect_records (job_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS defect_records_step_idx   ON defect_records (step_id);
+CREATE INDEX IF NOT EXISTS defect_records_status_idx ON defect_records (status) WHERE status = 'open';
+
+-- ============================================================
+-- Section 18: Firmware bounded context
+-- Owned exclusively by FirmwareService.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS firmware_records (
+  id                TEXT        PRIMARY KEY,
+  job_id            TEXT        NOT NULL REFERENCES jobs(id),
+  elf_filename      TEXT        NOT NULL,
+  binary_hash       TEXT        NOT NULL,          -- SHA-256 hex of the ELF file
+  firmware_version  TEXT,                          -- extracted from ELF symbol or .rodata
+  target_mcu        TEXT        NOT NULL,          -- e.g. 'STM32F407VGT6'
+  programmer_serial TEXT,                          -- probe/programmer serial number
+  flash_status      TEXT        NOT NULL DEFAULT 'pending'
+                    CHECK (flash_status IN ('pending', 'flashing', 'success', 'failed')),
+  crc_verified      BOOLEAN,
+  flash_duration_ms INT,
+  error_message     TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at      TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS firmware_records_job_idx    ON firmware_records (job_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS firmware_records_status_idx ON firmware_records (flash_status) WHERE flash_status IN ('pending', 'flashing');
