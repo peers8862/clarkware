@@ -1,6 +1,6 @@
 # Clarkware — P1 V1
 
-**Clark Industrial Process Environment** (IPE) is a manufacturing facility operations platform. It gives technicians, supervisors, and integrated tools a unified interface for tracking jobs, managing notes and communications, flagging issues, and running AI-assisted workflows — all in real time across a connected facility floor.
+**Clark Industrial Production Environment** (IPE) is a manufacturing facility operations platform. It gives technicians, supervisors, and integrated tools a unified interface for tracking jobs, managing notes and communications, flagging issues, and running AI-assisted workflows — all in real time across a connected facility floor.
 
 ---
 
