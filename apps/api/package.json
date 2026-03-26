@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@clark/ai": "workspace:*",
+    "@clark/cfx": "workspace:*",
     "@clark/core": "workspace:*",
     "@clark/db": "workspace:*",
     "@clark/events": "workspace:*",
     "@clark/identity": "workspace:*",
+    "@clark/firmware-utils": "workspace:*",
+    "@clark/ipc-criteria": "workspace:*",
     "@clark/storage": "workspace:*",
     "@clark/messaging": "workspace:*",
     "fastify": "^5.0.0",

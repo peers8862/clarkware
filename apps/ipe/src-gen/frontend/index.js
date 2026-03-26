@@ -71,6 +71,7 @@ module.exports = (async () => {
         await load(container, require('@theia/core/lib/browser/request/browser-request-module'));
         await load(container, require('@theia/messages/lib/browser/messages-frontend-module'));
         await load(container, require('clark-core-extension/lib/frontend-module'));
+        await load(container, require('clark-cfx-extension/lib/browser/cfx-frontend-module'));
         await load(container, require('clark-messaging-extension/lib/frontend-module'));
         ;
         await start();
@@ -83,27 +84,7 @@ module.exports = (async () => {
 
     async function start() {
         (window['theia'] = window['theia'] || {}).container = container;
+        // Panel layout is handled by ClarkFrontendContribution.onStart in clark-core-extension
         await container.get(FrontendApplication).start();
-        try {
-            const { ApplicationShell, WidgetManager } = require('@theia/core/lib/browser');
-            const shell = container.get(ApplicationShell);
-            const wm = container.get(WidgetManager);
-            // Main area: Clark primary panel
-            const main = await wm.getOrCreateWidget('clark-main-panel');
-            await shell.addWidget(main, { area: 'main' });
-            shell.activateWidget('clark-main-panel');
-            // Left sidebar: Job context
-            const jobCtx = await wm.getOrCreateWidget('clark-job-context');
-            await shell.addWidget(jobCtx, { area: 'left', rank: 100 });
-            await shell.activateWidget('clark-job-context');
-            // Bottom panel: Notes + Messaging as tabs
-            const notes = await wm.getOrCreateWidget('clark-notes');
-            await shell.addWidget(notes, { area: 'bottom', rank: 100 });
-            const messaging = await wm.getOrCreateWidget('clark-messaging');
-            await shell.addWidget(messaging, { area: 'bottom', rank: 200 });
-            shell.activateWidget('clark-notes');
-        } catch (e) {
-            console.error('[Clark] Failed to open panels:', e);
-        }
     }
 })();

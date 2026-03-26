@@ -5,6 +5,7 @@ import dbPlugin from './plugins/db.js';
 import corsPlugin from './plugins/cors.js';
 import websocketPlugin from './plugins/websocket.js';
 import storagePlugin from './plugins/storage.js';
+import cfxPlugin from './plugins/cfx.js';
 import { errorHandler } from './errors.js';
 import { configSchema } from './config.js';
 
@@ -23,6 +24,7 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
   await fastify.register(dbPlugin);
   await fastify.register(storagePlugin);
   await fastify.register(websocketPlugin);
+  await fastify.register(cfxPlugin);
 
   // 3. Global error handler
   fastify.setErrorHandler(errorHandler);
@@ -54,6 +56,8 @@ export async function buildApp(): Promise<ReturnType<typeof Fastify>> {
         './routes/v1/permissions.js',
         './routes/v1/ai.js',
         './routes/v1/artifacts.js',
+        './routes/v1/inspection.js',
+        './routes/v1/firmware.js',
       ] as const;
 
       for (const file of routeFiles) {

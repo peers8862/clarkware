@@ -1,5 +1,4 @@
 import { ReviewState } from '@clark/core';
-import { query } from '@clark/db';
 
 export interface ReviewableRecord {
   id: string;
@@ -7,6 +6,15 @@ export interface ReviewableRecord {
   reviewState: ReviewState;
   reviewedBy?: string;
   reviewedAt?: Date;
+}
+
+/** The result of validating a review state transition. Callers persist this. */
+export interface ReviewStateUpdate {
+  recordId: string;
+  recordType: 'note' | 'message';
+  newState: ReviewState;
+  reviewedBy: string;
+  reviewedAt: Date;
 }
 
 /** Valid ReviewState transitions */
@@ -19,26 +27,27 @@ function isValidTransition(from: ReviewState, to: ReviewState): boolean {
   return VALID_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-export async function updateReviewState(
+/**
+ * Validates a review state transition and returns the update to apply.
+ * The AI package does NOT persist anything — the calling service owns the record
+ * and is responsible for writing the ReviewStateUpdate to the database.
+ */
+export function buildReviewStateUpdate(
   record: ReviewableRecord,
   newState: ReviewState,
   reviewerActorId: string,
-): Promise<void> {
+): ReviewStateUpdate {
   if (!isValidTransition(record.reviewState, newState)) {
     throw new Error(
       `Invalid review state transition: ${record.reviewState} → ${newState} for ${record.recordType} ${record.id}`,
     );
   }
 
-  const reviewedAt = new Date();
-  const table = record.recordType === 'note' ? 'notes' : 'messages';
-
-  await query(
-    `UPDATE ${table}
-     SET review_state = $1,
-         reviewed_by  = $2,
-         reviewed_at  = $3
-     WHERE id = $4`,
-    [newState, reviewerActorId, reviewedAt, record.id],
-  );
+  return {
+    recordId: record.id,
+    recordType: record.recordType,
+    newState,
+    reviewedBy: reviewerActorId,
+    reviewedAt: new Date(),
+  };
 }

@@ -19,6 +19,9 @@
     "@theia/core": "^1.50.0",
     "@theia/messages": "^1.50.0",
     "clark-core-extension": "workspace:*",
+    "clark-cfx-extension": "workspace:*",
+    "clark-firmware-extension": "workspace:*",
+    "clark-inspection-extension": "workspace:*",
     "clark-messaging-extension": "workspace:*"
   },
   "devDependencies": {

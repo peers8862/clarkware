@@ -1,47 +1,23 @@
+/**
+ * Jobs routes — thin HTTP adapter.
+ * No SQL, no business logic, no external integration calls here.
+ * All domain logic lives in JobService.
+ */
 import type { FastifyInstance } from 'fastify';
-import { v4 as uuidv4 } from 'uuid';
-import { query, queryOne } from '@clark/db';
-import { EventStore } from '@clark/events';
-import { can } from '@clark/identity';
-import { PermissionCategory, SourceType, asId } from '@clark/core';
-import type { JobId, FacilityId, WorkstationId, EventId, ArtifactId } from '@clark/core';
+import { JobService } from '../../services/job-service.js';
 import { notFound, forbidden, badRequest } from '../../errors.js';
 import { broadcastEvent } from '../ws/realtime.js';
 
-const eventStore = new EventStore();
+const jobService = new JobService();
 
 export default async function jobsRoutes(fastify: FastifyInstance): Promise<void> {
+
   fastify.get('/jobs', async (request) => {
-    try {
-      if (!can(request.actor, PermissionCategory.View, { level: 'facility', facilityId: '*' })) {
-        throw forbidden();
-      }
-      return await query(
-        `SELECT id, title, status, facility_id, workstation_id, job_type, priority, human_ref, created_at
-         FROM jobs WHERE deleted_at IS NULL ORDER BY created_at DESC`,
-      );
-    } catch (err) {
-      console.error('[GET /jobs] ERROR:', err);
-      throw err;
-    }
+    return jobService.listJobs(request.actor);
   });
 
   fastify.get<{ Params: { id: string } }>('/jobs/:id', async (request) => {
-    const row = await queryOne<{
-      id: string; title: string; status: string; facility_id: string;
-      zone_id: string; workstation_id: string; description: string | null;
-      current_owner_actor_id: string | null; created_at: Date; updated_at: Date;
-    }>(
-      `SELECT id, title, status, facility_id, zone_id, workstation_id, description,
-              current_owner_actor_id, created_at, updated_at
-       FROM jobs WHERE id = $1 AND deleted_at IS NULL`,
-      [request.params.id],
-    );
-    if (!row) throw notFound();
-    if (!can(request.actor, PermissionCategory.View, { level: 'facility', facilityId: row.facility_id })) {
-      throw forbidden();
-    }
-    return row;
+    return jobService.getJob(request.actor, request.params.id);
   });
 
   fastify.post<{
@@ -76,176 +52,24 @@ export default async function jobsRoutes(fastify: FastifyInstance): Promise<void
       },
     },
     async (request, reply) => {
-      const { title, facilityId, zoneId, workstationId, description = null, jobType = 'general', priority = 'medium', humanRef } = request.body;
-      if (!can(request.actor, PermissionCategory.CreateNote, { level: 'facility', facilityId })) {
-        throw forbidden();
-      }
-      const id = uuidv4();
-      await query(
-        `INSERT INTO jobs (id, facility_id, zone_id, workstation_id, title, description, job_type, priority, human_ref, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft')`,
-        [id, facilityId, zoneId, workstationId, title, description, jobType, priority, humanRef ?? null],
-      );
-      return reply.status(201).send({ id, title, status: 'draft' });
+      const result = await jobService.createJob(request.actor, request.body);
+      return reply.status(201).send(result);
     },
   );
 
   fastify.post<{ Params: { id: string } }>('/jobs/:id/start', {}, async (request, reply) => {
-    const job = await queryOne<{
-      id: string; status: string; facility_id: string; zone_id: string; workstation_id: string;
-    }>(
-      'SELECT id, status, facility_id, zone_id, workstation_id FROM jobs WHERE id = $1 AND deleted_at IS NULL',
-      [request.params.id],
-    );
-    if (!job) throw notFound();
-    if (job.status !== 'draft') throw badRequest('Job must be in draft status to start');
-
-    const now = new Date();
-    await query(
-      "UPDATE jobs SET status = 'active', opened_at = $1, updated_at = $1 WHERE id = $2",
-      [now, job.id],
-    );
-
-    const versionResult = await queryOne<{ max_seq: string | null }>(
-      'SELECT MAX(sequence_number) AS max_seq FROM events WHERE stream_id = $1',
-      [`job:${job.id}`],
-    );
-    const currentVersion = versionResult?.max_seq != null ? Number(versionResult.max_seq) : -1;
-
-    const actor = request.actor;
-    const event = {
-      id: asId<EventId>(uuidv4()),
-      type: 'job.started' as const,
-      facilityId: asId<FacilityId>(job.facility_id),
-      workstationId: asId<WorkstationId>(job.workstation_id),
-      jobId: asId<JobId>(job.id),
-      issueId: null,
-      conversationId: null,
-      streamId: `job:${job.id}`,
-      sequenceNumber: currentVersion + 1,
-      actor: { actorId: actor.actorId, type: actor.type },
-      occurredAt: now,
-      recordedAt: now,
-      sourceType: SourceType.HumanUI,
-      correlationId: null,
-      causationId: null,
-      artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
-      retentionClass: 'operational' as const,
-      metadata: {} as Record<string, unknown>,
-      payload: {
-        jobId: asId<JobId>(job.id),
-        assignedActorId: actor.actorId,
-      },
-    };
-
-    await eventStore.append(`job:${job.id}`, currentVersion, [event]);
-    broadcastEvent(event);
-
-    return reply.status(200).send({ id: job.id, status: 'active' });
+    const result = await jobService.startJob(request.actor, request.params.id);
+    return reply.status(200).send(result);
   });
 
   fastify.post<{ Params: { id: string } }>('/jobs/:id/resume', {}, async (request, reply) => {
-    const job = await queryOne<{
-      id: string; status: string; facility_id: string; zone_id: string; workstation_id: string;
-    }>(
-      'SELECT id, status, facility_id, zone_id, workstation_id FROM jobs WHERE id = $1 AND deleted_at IS NULL',
-      [request.params.id],
-    );
-    if (!job) throw notFound();
-    if (job.status !== 'paused') throw badRequest('Job must be paused to resume');
-
-    const now = new Date();
-    await query(
-      "UPDATE jobs SET status = 'active', updated_at = $1 WHERE id = $2",
-      [now, job.id],
-    );
-
-    const versionResult = await queryOne<{ max_seq: string | null }>(
-      'SELECT MAX(sequence_number) AS max_seq FROM events WHERE stream_id = $1',
-      [`job:${job.id}`],
-    );
-    const currentVersion = versionResult?.max_seq != null ? Number(versionResult.max_seq) : -1;
-
-    const actor = request.actor;
-    const event = {
-      id: asId<EventId>(uuidv4()),
-      type: 'job.resumed' as const,
-      facilityId: asId<FacilityId>(job.facility_id),
-      workstationId: asId<WorkstationId>(job.workstation_id),
-      jobId: asId<JobId>(job.id),
-      issueId: null,
-      conversationId: null,
-      streamId: `job:${job.id}`,
-      sequenceNumber: currentVersion + 1,
-      actor: { actorId: actor.actorId, type: actor.type },
-      occurredAt: now,
-      recordedAt: now,
-      sourceType: SourceType.HumanUI,
-      correlationId: null,
-      causationId: null,
-      artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
-      retentionClass: 'operational' as const,
-      metadata: {} as Record<string, unknown>,
-      payload: { jobId: asId<JobId>(job.id) },
-    };
-
-    await eventStore.append(`job:${job.id}`, currentVersion, [event]);
-    broadcastEvent(event);
-
-    return reply.status(200).send({ id: job.id, status: 'active' });
+    const result = await jobService.resumeJob(request.actor, request.params.id);
+    return reply.status(200).send(result);
   });
 
   fastify.post<{ Params: { id: string } }>('/jobs/:id/reopen', {}, async (request, reply) => {
-    const job = await queryOne<{
-      id: string; status: string; facility_id: string; zone_id: string; workstation_id: string;
-    }>(
-      'SELECT id, status, facility_id, zone_id, workstation_id FROM jobs WHERE id = $1 AND deleted_at IS NULL',
-      [request.params.id],
-    );
-    if (!job) throw notFound();
-    if (job.status !== 'completed' && job.status !== 'voided') {
-      throw badRequest('Only completed or voided jobs can be reopened');
-    }
-
-    const now = new Date();
-    await query(
-      "UPDATE jobs SET status = 'draft', closed_at = NULL, updated_at = $1 WHERE id = $2",
-      [now, job.id],
-    );
-
-    const versionResult = await queryOne<{ max_seq: string | null }>(
-      'SELECT MAX(sequence_number) AS max_seq FROM events WHERE stream_id = $1',
-      [`job:${job.id}`],
-    );
-    const currentVersion = versionResult?.max_seq != null ? Number(versionResult.max_seq) : -1;
-
-    const actor = request.actor;
-    const event = {
-      id: asId<EventId>(uuidv4()),
-      type: 'job.reopened' as const,
-      facilityId: asId<FacilityId>(job.facility_id),
-      workstationId: asId<WorkstationId>(job.workstation_id),
-      jobId: asId<JobId>(job.id),
-      issueId: null,
-      conversationId: null,
-      streamId: `job:${job.id}`,
-      sequenceNumber: currentVersion + 1,
-      actor: { actorId: actor.actorId, type: actor.type },
-      occurredAt: now,
-      recordedAt: now,
-      sourceType: SourceType.HumanUI,
-      correlationId: null,
-      causationId: null,
-      artifactRefs: [] as unknown as ReadonlyArray<ArtifactId>,
-      retentionClass: 'operational' as const,
-      metadata: {} as Record<string, unknown>,
-      payload: { jobId: asId<JobId>(job.id) },
-    };
-
-    await eventStore.append(`job:${job.id}`, currentVersion, [event]);
-    broadcastEvent(event);
-
-    return reply.status(200).send({ id: job.id, status: 'draft' });
+    const result = await jobService.reopenJob(request.actor, request.params.id);
+    return reply.status(200).send(result);
   });
 
   fastify.patch<{
@@ -274,42 +98,7 @@ export default async function jobsRoutes(fastify: FastifyInstance): Promise<void
       },
     },
     async (request) => {
-      const { id } = request.params;
-      const { status, title, description, priority } = request.body;
-
-      const job = await queryOne<{ facility_id: string; status: string }>(
-        'SELECT facility_id, status FROM jobs WHERE id = $1 AND deleted_at IS NULL',
-        [id],
-      );
-      if (!job) throw notFound();
-
-      if (status) {
-        if (!can(request.actor, PermissionCategory.ApproveDisposition, { level: 'facility', facilityId: job.facility_id })) {
-          throw forbidden();
-        }
-        await query(
-          `UPDATE jobs SET status = $1,
-           closed_at = CASE WHEN $1 IN ('completed','voided') THEN now() ELSE NULL END,
-           updated_at = now() WHERE id = $2`,
-          [status, id],
-        );
-      }
-
-      if (title !== undefined || description !== undefined || priority !== undefined) {
-        if (!can(request.actor, PermissionCategory.View, { level: 'facility', facilityId: job.facility_id })) {
-          throw forbidden();
-        }
-        const setClauses: string[] = ['updated_at = now()'];
-        const params: unknown[] = [];
-        let idx = 1;
-        if (title !== undefined)       { setClauses.push(`title = $${idx++}`);       params.push(title); }
-        if (description !== undefined) { setClauses.push(`description = $${idx++}`); params.push(description); }
-        if (priority !== undefined)    { setClauses.push(`priority = $${idx++}`);    params.push(priority); }
-        params.push(id);
-        await query(`UPDATE jobs SET ${setClauses.join(', ')} WHERE id = $${idx}`, params);
-      }
-
-      return { ok: true };
+      return jobService.updateJob(request.actor, request.params.id, request.body as never);
     },
   );
 }
